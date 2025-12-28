@@ -1,5 +1,5 @@
 pipeline {
-  agent { label 'node1' }
+  agent any
 
   stages {
 
@@ -9,15 +9,39 @@ pipeline {
       }
     }
 
-    stage('Build App') {
+    stage('Install Dependencies') {
       steps {
         sh 'npm install'
       }
     }
 
-    stage('Docker Build') {
+    stage('Build Docker Image') {
       steps {
-        sh 'docker build -t user-management-service:ci .'
+        sh "docker build -t user-management-service:${env.BRANCH_NAME} ."
+      }
+    }
+
+    stage('Branch Info') {
+      steps {
+        echo "Building branch: ${env.BRANCH_NAME}"
+      }
+    }
+
+    stage('Integration Checks') {
+      when {
+        branch 'develop'
+      }
+      steps {
+        echo "Running integration checks for develop"
+      }
+    }
+
+    stage('Feature Validation') {
+      when {
+        expression { env.BRANCH_NAME.startsWith('feature/') }
+      }
+      steps {
+        echo "Validating feature branch"
       }
     }
 
@@ -25,10 +49,10 @@ pipeline {
 
   post {
     success {
-      echo "CI pipeline succeeded"
+      echo "CI passed for ${env.BRANCH_NAME}"
     }
     failure {
-      echo "CI pipeline failed"
+      echo "CI failed for ${env.BRANCH_NAME}"
     }
   }
 }
